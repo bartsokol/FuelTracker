@@ -1,0 +1,5 @@
+source https://api.nuget.org/v3/index.json
+framework >= net45
+
+nuget FAKE
+nuget Suave 1.0.0
