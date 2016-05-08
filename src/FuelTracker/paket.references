@@ -1,1 +1,5 @@
 Suave
+Suave.Experimental
+fsharp.data
+newtonsoft.json
+sqlprovider

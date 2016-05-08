@@ -1,7 +1,41 @@
 #r "..\..\packages/Suave/lib/net40/Suave.dll"
+#r "..\..\packages/Suave.Experimental/lib/net40/Suave.Experimental.dll"
+#r "..\..\packages/FSharp.Data/lib/net40/FSharp.Data.dll"
+#r "..\..\packages/SQLProvider/lib/FSharp.Data.SQLProvider.dll"
+#r "..\..\packages/Newtonsoft.Json/lib/net45/Newtonsoft.Json.dll"
 
-open Suave                 // always open suave
-open Suave.Successful      // for OK-result
-open Suave.Web             // for config
+open System
+open Suave
+open Suave.Filters
+open Suave.Operators
+open Suave.Successful
+open Suave.Web
+open Suave.Html
+open FSharp.Data
+open Newtonsoft.Json
 
-startWebServer defaultConfig (OK "Hello World!")
+type Fueling = {
+    Date : DateTime
+    Odometer : int
+    Amount : float
+    Cost : float 
+}
+
+type Motostat = CsvProvider<"motostat48277.csv", ";">
+let sourceData = Motostat.Load "motostat48277.csv"
+let data = sourceData.Rows
+            |> Seq.map (fun s -> {
+                                    Date = s.Date
+                                    Odometer = s.Odometer
+                                    Amount = float s.Quantity
+                                    Cost = float s.Cost
+                                })
+            |> Seq.sortBy (fun f -> f.Date)
+            |> JsonConvert.SerializeObject
+
+let webPart =
+    choose [
+        path "/" >=> OK data
+    ]
+
+startWebServer defaultConfig webPart

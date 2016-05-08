@@ -2,4 +2,8 @@ source https://api.nuget.org/v3/index.json
 framework >= net45
 
 nuget FAKE
+nuget fsharp.data
+nuget newtonsoft.json
+nuget sqlprovider
 nuget Suave 1.0.0
+nuget Suave.Experimental
