@@ -10,25 +10,29 @@ open Suave.Filters
 open Suave.Operators
 open Suave.Successful
 open Suave.Web
-open Suave.Html
 open FSharp.Data
 open Newtonsoft.Json
 
 type Fueling = {
     Date : DateTime
     Odometer : int
+    TripOdometer : float
     Amount : float
-    Cost : float 
+    Cost : float
+    Fuel : string
 }
 
 type Motostat = CsvProvider<"motostat48277.csv", ";">
 let sourceData = Motostat.Load "motostat48277.csv"
+
 let data = sourceData.Rows
             |> Seq.map (fun s -> {
                                     Date = s.Date
                                     Odometer = s.Odometer
+                                    TripOdometer = float s.Trip_odometer
                                     Amount = float s.Quantity
                                     Cost = float s.Cost
+                                    Fuel = s.Fuel_name
                                 })
             |> Seq.sortBy (fun f -> f.Date)
             |> JsonConvert.SerializeObject
