@@ -13,10 +13,18 @@ open Suave.Web
 open FSharp.Data
 open Newtonsoft.Json
 
+type Percentage = byte
+
 type FuelingKind = Full | Half
-type AirCon = AcOff | AcOn of byte
+type AirCon = AcOff | AcOn of Percentage
 type TyreKind = Summer | Winter | Universal
 type Economy = High | Average | Low
+
+type RouteSplit = {
+    City : Percentage
+    Country : Percentage
+    Motorway : Percentage
+}
 
 type Fueling = {
     Date : DateTime
@@ -32,6 +40,8 @@ type Fueling = {
     AirCon : AirCon
     BcConsumption : float option
     BcAvgSpeed : float option
+    RouteSplit : RouteSplit
+    Notes : string
 }
 
 let parseFuelingKind = function
@@ -52,16 +62,15 @@ let parseAirCon = function
     | 0 -> AcOff
     | p -> AcOn (byte p)
 
-module Option =
-    let someIf predicate value =
-        match predicate value with
-        | true -> Some value
-        | _ -> None
+let routeSplit city country motorway = {
+        City = byte (100m * city)
+        Country = byte (100m * country)
+        Motorway = byte (100m * motorway)
+    }
 
 type Motostat = CsvProvider<"motostat48277.csv", ";">
 let sourceData = Motostat.Load "motostat48277.csv"
-// let x = sourceData.Rows |> Seq.head
-// x.
+
 let data = sourceData.Rows
             |> Seq.map (fun s -> {
                                     Date = s.Date
@@ -75,15 +84,19 @@ let data = sourceData.Rows
                                     TyreKind = parseTyreKind s.Tires
                                     Economy = parseEconomy s.Driving_style
                                     AirCon = parseAirCon s.Ac
-                                    BcConsumption = Option.someIf (fun x -> x <> 0.) (float s.Bc_consumption)
-                                    BcAvgSpeed = Option.someIf (fun x -> x <> 0.) (float s.Bc_avg_speed)
+                                    BcConsumption = Option.filter (fun x -> x <> 0.) (Some (float s.Bc_consumption))
+                                    BcAvgSpeed = Option.filter (fun x -> x <> 0.) (Some (float s.Bc_avg_speed))
+                                    RouteSplit = routeSplit s.Route_city s.Route_country s.Route_motorway
+                                    Notes = s.Notes
                                 })
             |> Seq.sortBy (fun f -> f.Date)
             |> JsonConvert.SerializeObject
 
+let setJson = Suave.Writers.setHeader "Content-Type" "application/json"
+
 let webPart =
     choose [
-        path "/" >=> OK data
+        path "/" >=> OK data >=> setJson
     ]
 
 startWebServer defaultConfig webPart
